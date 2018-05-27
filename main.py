@@ -11,7 +11,23 @@
 listen_ip = "0.0.0.0"
 listen_port = 10001
 
+#Import built-in python libraries and frameworks
+import base64
+import binascii
 import cherrypy
+import codecs
+import copy
+import hashlib
+import hmac, struct
+import json
+# import markdown
+import os, os.path
+import sched, time
+import socket
+import sys, traceback
+import string, random
+import threading
+import urllib2
 
 class MainApp(object):
 
@@ -20,6 +36,16 @@ class MainApp(object):
                   'tools.encode.encoding': 'utf-8',
                   'tools.sessions.on' : 'True',
                  }                 
+
+    # INITIALISE VARIABLES
+    def  __init__(self):
+        try:
+            pass
+        except :
+            pass
+        finally:
+            pass
+        pass
 
     # If they try somewhere we don't know, catch it here and send them to the right place.
     @cherrypy.expose
@@ -77,9 +103,15 @@ class MainApp(object):
         raise cherrypy.HTTPRedirect('/')
         
     def authoriseUserLogin(self, username, password):
+        hashPassword = hashlib.sha256(password+username).hexdigest()
         print username
         print password
-        if (username.lower() == "dylan") and (password.lower() == "password"):
+        print hashPassword
+        #NOTE IP and Location HARDCODED
+        location = "2"
+        url = "http://cs302.pythonanywhere.com/report/?username="+username.lower()+"&password="+hashPassword+"&location="+location+"&ip=127.0.0.1&port="+str(listen_port)+"&enc=0"
+        response = urllib2.urlopen(url).read()
+        if response == "0, User and IP logged":
             return 0
         else:
             return 1
@@ -96,7 +128,7 @@ def runMainApp():
 
     print "========================="
     print "University of Auckland"
-    print "COMPSYS302 - Software Design App"
+    print "COMPSYS302 - Server"
     print "========================================"                       
     
     # Start the web server
