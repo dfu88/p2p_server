@@ -177,7 +177,29 @@ iframe {
   
   background-position: center;
   background-size: cover;
-  background-repeat: no-repeat;;
+  background-repeat: no-repeat;
+}
+
+.container-general100 {
+  width: 100%;  
+  min-height: 100vh;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  -webkit-align-content: center;
+  align-content: center;
+  justify-content: center;
+  align-items: center;
+  padding: 5px;
+  margin: auto;
+  
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 .wrap-404 {
@@ -192,6 +214,13 @@ iframe {
   background: #fff;
   border-radius: 10px;
   position: relative;
+}
+
+.wrap-general100 {
+  margin: auto;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 10px;
 }
 
 
