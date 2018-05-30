@@ -95,3 +95,12 @@ def getAllUserData():
 	conn.commit()
 	conn.close()
 	return allUserData
+
+def getAllUserDataAsList():
+	conn = sqlite3.connect(DB_NAME)
+	c = conn.cursor()
+	c.execute('SELECT * FROM Users')
+	allUserData = [dict(zip(['rowid', 'username', 'ip', 'location', 'lastLogin', 'port', 'publicKey'], row)) for row in c.fetchall()]
+	conn.commit()
+	conn.close()
+	return allUserData
