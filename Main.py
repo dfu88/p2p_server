@@ -92,6 +92,7 @@ class MainApp(object):
         if (error == 0):
             self.username = username;
             self.loggedIn = True
+            self.timer.resume()
         raise cherrypy.HTTPRedirect('/')
 
     @cherrypy.expose
@@ -108,6 +109,7 @@ class MainApp(object):
                 response = self.logoffServer()
                 if response == "0, Logged off successfully":
                     self.loggedIn = False
+                    self.timer.pause()
         except:
             pass
         finally:
@@ -158,6 +160,29 @@ class MainApp(object):
     def decJSON(self,data):
         return json.loads(data)
 
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def getUserListJSON(self):
+        data = Db.getAllUserDataAsList()
+        print data
+        for user in data:
+
+            lastLogin = time.strftime(
+                "%Y/%m/%d, %H:%M:%S", time.localtime(float(user['lastLogin'] or 0)))
+            if int(user['lastLogin'] or 0) + 86400 > int(time.time()):
+                user['lastLogin'] = time.strftime(
+                    "%H:%M:%S", time.localtime(float(user['lastLogin'] or 0)))
+            elif user['lastLogin'] == None:
+                user['lastLogin'] = 'NEVER'
+            elif int(user['lastLogin'] or 0) == 0:
+                user['lastLogin'] = 'NEVER'
+            else:
+                user['lastLogin'] = time.strftime(
+                    "%a, %d %b %Y", time.localtime(float(user['lastLogin'] or 0)))
+
+        dataList = {str(k): v for k, v in enumerate(data)}
+        return dataList
+
     ####### LOGIN SERVER ########
     def reportServer(self,username=None,password=None):
         # location = "2"
@@ -198,7 +223,7 @@ class MainApp(object):
                     self.username = username.lower()
                     self.hashPassword = hashPassword
                 data = self.getListServer()
-                print data
+                # print data
                 Db.updateUserData(data)
                 self.timer.resume()
             return response
