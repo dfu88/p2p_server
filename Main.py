@@ -93,17 +93,12 @@ class MainApp(object):
             self.username = username;
             self.loggedIn = True
             self.timer.resume()
+            print "sucessdjkafb"
         raise cherrypy.HTTPRedirect('/')
 
     @cherrypy.expose
     def signout(self):
         """Logs the current user out, expires their session"""
-        # username = cherrypy.session.get('username')
-        # if (username == None):
-        #     pass
-        # else:
-        #     cherrypy.lib.sessions.expire()
-        # raise cherrypy.HTTPRedirect('/')
         try:
             if self.loggedIn:
                 response = self.logoffServer()
@@ -114,6 +109,32 @@ class MainApp(object):
             pass
         finally:
             raise cherrypy.HTTPRedirect('/')
+
+    @cherrypy.expose
+    def sendMessage(self, sender, destination, message, stamp):
+        payload = {'sender': sender, 'destination': destination, 'message': message, 'stamp': round(float(time.time()))}
+        
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    def receiveMessage(self):
+        print "testing"
+        try:
+            dictionary = cherrypy.request.json
+            print dictionary
+            # for key in dictionary:
+            #     dictionary[key] = unicode(dictionary[key])
+            if ('sender' not in dictionary or 'destination' not in dictionary or 'message' not in dictionary or 'stamp' not in dictionary):
+                return '1: Missing Compulsory Field'
+            #Save message in database
+            # if (unicode(dictionary['enc']) and 'encryption' in dictionary) != u'0':
+            #     return "9: Encryption Standard Not Supported"
+            Db.saveMessage(dictionary)
+            print "!!!!!!!!testing"
+            return '0: Message Received'
+        except Exception as e:
+            return '-1: Internal Error'
+
 
     @cherrypy.expose
     def editProfile(self):
@@ -143,8 +164,11 @@ class MainApp(object):
         if response == "0, User and IP logged":
             self.username = username
             self.hashPassword = hashlib.sha256((password+username)).hexdigest()
+            print "sadajhsd"
             return 0
         else:
+            print "sadajhsd12133"
+            print response
             return 1
 
 
@@ -186,6 +210,8 @@ class MainApp(object):
     ####### LOGIN SERVER ########
     def reportServer(self,username=None,password=None):
         # location = "2"
+
+        print "388080491"
         if username is None:
             username = self.username
         if password is None:
@@ -203,22 +229,28 @@ class MainApp(object):
             s.connect(("8.8.8.8", 80))
             ipLocal = s.getsockname()[0]
             s.close()
+            print "2313312214"
+            print ipLocal
+            print ip
 
             if '10.10' in ipLocal:
                 location = '0'
-                ipFinal = localip
+                ipFinal = ipLocal
             elif '172.2' in ipLocal:
                 location = '1'
-                ipFinal = localip
+                ipFinal = ipLocal
             else:
                 location = '2'
                 ipFinal = ip
 
-            url = "http://cs302.pythonanywhere.com/report/?username="+username.lower()+"&password="+hashPassword+"&location="+location+"&ip="+ipFinal+"&port="+str(listen_port)+"&enc=0"
+            url = "http://cs302.pythonanywhere.com/report/?username="+username.lower()+"&password="+hashPassword+"&location="+"1"+"&ip="+ipFinal+"&port="+str(listen_port)+"&enc=0"
+            # url = "http://cs302.pythonanywhere.com/report/?username=dfu987&password=74a852ce7fe588a5e8a0b18a7568ab37649f477393655d7a6fdc0f5f9af6bdcf&location=1&ip=172.23.45.207&port=10010&enc=0"
             response = urllib2.urlopen(url).read()
+            print "cancer"
+            print response
             # Update User Data if already logged in
             #NOTE include self.loggedIn later
-            if response == "0, User and IP logged":
+            if '0' in response:
                 if self.loggedIn == False:
                     self.username = username.lower()
                     self.hashPassword = hashPassword
@@ -226,6 +258,7 @@ class MainApp(object):
                 # print data
                 Db.updateUserData(data)
                 self.timer.resume()
+            print "12313122141"
             return response
         except:
             return "Internal error calling report API"
