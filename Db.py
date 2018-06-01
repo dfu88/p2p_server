@@ -105,6 +105,25 @@ def getAllUserDataAsList():
 	conn.close()
 	return allUserData
 
+def getUserDataAsList(destination):
+	conn = sqlite3.connect(DB_NAME)
+	c = conn.cursor()
+	c.execute("SELECT * FROM Users WHERE username='{a}'".format(a=destination))
+	userData = [dict(zip(['rowid', 'username', 'ip', 'location', 'lastLogin', 'port', 'publicKey'], row)) for row in c.fetchall()]
+	conn.commit()
+	conn.close()
+	return userData
+
+def getMessages(destination,sender):
+	conn = sqlite3.connect(DB_NAME)
+	c = conn.cursor()
+	c.execute("SELECT * FROM Messages_Files WHERE sender='{a}' AND destination='{b}' OR sender='{b}' AND destination='{a}'".format(a=destination, b=sender))
+	messageList = [dict(zip(['sender', 'destination', 'message', 'stamp', 'encoding', 'encryption','hashing', 'hash', 'decryptionKey','messageStatus'], row)) for row in c.fetchall()]
+	c.close()
+	conn.commit()
+	conn.close()
+	return messageList
+
 def saveMessage(dictionary):
 	print " INSIDE DB"
 	conn = sqlite3.connect(DB_NAME)
