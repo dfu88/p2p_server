@@ -5,6 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel='stylesheet' href="static/css/simplemde.min.css">
   <style type="text/css">
    
     .conversation-wrap
@@ -15,10 +16,10 @@
         max-width: 400px*/
         overflow: auto;
         float: left;
-        min-width: 280px;
-        max-width: 340px;
-        width: 40%;
-        height: 89vh;
+        /*min-width: 260px;
+        max-width: 450px;*/
+        width: 25%;
+        height: 90vh;
 /*        background: #2c3e50;
         color: #f5f5f5;*/
 /*        overflow: hidden;*/
@@ -44,10 +45,11 @@
     {
         /*box-shadow: 0 0 3px #ddd;
         padding:0;*/
-        width: 60%;
+        width: 75%;
+        /*max-width: 65%;*/
         overflow: auto;
         float: right;
-        height: 60vh;
+        height: 90vh;
     }
     .msg
     {
@@ -58,7 +60,7 @@
     .msg-wrap
     {
         padding:10px;
-        height: 352px;
+        height: 49vh;
         overflow: auto;
 
     }
@@ -211,13 +213,13 @@
   </div>
 </nav>
   
-<div class="container">
+<div class="container-fluid">
   <div class="conversation-wrap col-lg-3">
    <!--  <ul class="peernav"></ul> -->
     <script id="userList-template" type="x-handlebars-template">
         {{#each this}}
         <div class="media conversation">
-          <a class="pull-left" href="/?userID={{username}}"><img class="media-object" data-src="holder.js/64x64" alt="profilepic" style="width: 32px; height: 32px;" src="{{picture}}"></a>            
+          <a class="pull-left" href="/?username={{username}}"><img class="media-object" data-src="holder.js/64x64" alt="profilepic" style="width: 32px; height: 32px;" src="{{picture}}"></a>            
             <div class="media-body">
                 <h5 class="media-heading">{{username}}</h5>
                 <small>Last Online: {{lastLogin}}</small>
@@ -227,10 +229,34 @@
     </script>
   </div>
 
-  <div class="message-wrap col col-lg-7">
+  <div class="message-wrap col-lg-12">
    <!--  <ul class="peernav"></ul> -->
-    <p>sdjzvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvbnsdvbjd
-    vjscbb jb sdjb jsdb sdjbv jssb sb </p>
+   <div class="msg-wrap" id="your_div">
+      <script id="messagelist-template" type="x-handlebars-template">
+        {{#each this}}
+        <div class="media msg" id="marksdiv">
+            <a class="pull-left" href="chat?userID='{{username}}'"><img class="media-object" data-src="holder.js/64x64" alt="profilepic" style="width: 32px; height: 32px;" src="{{picture}}"></a>
+            <div class="media-body">
+                <h5 class="media-heading">{{username}}</h5>
+                <small class="col-lg-10">{{{message}}}</small>
+                <small class="pull-left time">
+                <i class="fa fa-clock-o"></i>{{stamp}}<br>{{messageStatus}}</small>
+            </div>
+        </div>
+        {{/each}}
+      </script>
+    </div>
+    <div class='send-wrap '>
+        <textarea name='message' id='message' form='usrform' class='form-control send-message' rows='3' placeholder='Write a reply...'></textarea>
+    </div>
+    <div class='btn-panel'>
+        <form accept-charset='UTF-8' action='/sendMessage' id='usrform' method='post' enctype='multipart/form-data'>
+            <input type='file' class=' col-lg-6 btn    send-message-btn' name='attachments' maxlength=50>
+            <input type='submit' class=' col-lg-4 text-right btn send-message-btn pull-right' role='button' value='Send Message'/>
+        </form>
+    </div>
+    <!-- <p>sdjzvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvbnsdvbjd
+    vjscbb jb sdjb jsdb sdjbv jssb sb </p> -->
   <!-- </div> -->
 </div>
 
@@ -243,19 +269,22 @@
 $(function  () {
   $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getUserListJSON', function(data) {
       var template = $("#userList-template").html();
-      console.log(data)
-      console.log(template)
+      // console.log(data)
+      // console.log(template)
       var templateScript = Handlebars.compile(template);
       var html = templateScript(data);
       $(".conversation-wrap").append(html); 
   });
-  // $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getHTMLStatus', function(data) {
-  //   var theTemplateScript = $("#htmlstatus-template").html();
-  //   var theTemplate = Handlebars.compile (theTemplateScript);
-  //   $(".htmlstatus").append (theTemplate(data)); 
-  // });
+  $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getMessageListJSON', function(data) {
+    var template = $("#messagelist-template").html();
+    var templateScript = Handlebars.compile(template);
+    var html = templateScript(data)
+    $(".message-wrap").append(html); 
+  });
 });
 </script>
+<script src="static/js/simplemde.min.js"></script>
+<script>new SimpleMDE({ element: document.getElementById('message'), spellChecker: false, });</script>
 
 </body>
 </html>
