@@ -72,7 +72,7 @@ class MainApp(object):
 
     # PAGES (which return HTML that can be viewed in browser)
     @cherrypy.expose
-    def index(self):
+    def index(self,username=None):
         if self.loggedIn:
             Page = file('index.html')
             return Page
@@ -93,7 +93,7 @@ class MainApp(object):
             self.username = username;
             self.loggedIn = True
             self.timer.resume()
-            print "sucessdjkafb"
+            # print "sucessdjkafb"
         raise cherrypy.HTTPRedirect('/')
 
     @cherrypy.expose
@@ -111,9 +111,26 @@ class MainApp(object):
             raise cherrypy.HTTPRedirect('/')
 
     @cherrypy.expose
-    def sendMessage(self, sender, destination, message, stamp):
+    def sendMessage(self, message, destination='dfu987', sender=None, attachments=None):
+        if sender == None:
+            sender = self.username
+        # if destination == None
+        #     destination = self.username
         payload = {'sender': sender, 'destination': destination, 'message': message, 'stamp': round(float(time.time()))}
-        
+        #Need to handle hashing and encryption later
+        userData = Db.getUserDataAsList(destination)
+        request = None
+        if sender == destination:
+            request = urllib2.Request('http://0.0.0.0:' + str(listen_port) + '/receiveMessage' , self.encJSON(payload), {'Content-Type': 'application/json'})
+        else:
+            request = urllib2.Request('http://' + userData[0]['ip'] +':' + userData[0]['port'] + '/receiveMessage' , self.JSON_encode(payload), {'Content-Type': 'application/json'})
+        response = urllib2.urlopen(request).read()
+
+        #Check if message received
+        if destination != self.username and '0' in response:
+            Db.saveMessage(payload)
+        elif '0' not in response:
+            payload['message'] = "Message Send Failed: " + response
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
@@ -137,7 +154,7 @@ class MainApp(object):
 
 
     @cherrypy.expose
-    def editProfile(self):
+    def editProfile(self,fullname=None,position=None,description=None,location=None,imgURL=None):
         if self.loggedIn:
             return file('editProfile.html')
         else:
@@ -156,19 +173,19 @@ class MainApp(object):
     """    
     def authoriseUserLogin(self, username, password):
         hashPassword = hashlib.sha256(password+username).hexdigest()
-        print username
-        print password
-        print hashPassword
+        # print username
+        # print password
+        # print hashPassword
         
         response = self.reportServer(username,password)
         if response == "0, User and IP logged":
             self.username = username
             self.hashPassword = hashlib.sha256((password+username)).hexdigest()
-            print "sadajhsd"
+            # print "sadajhsd"
             return 0
         else:
-            print "sadajhsd12133"
-            print response
+            # print "sadajhsd12133"
+            # print response
             return 1
 
 
@@ -188,7 +205,7 @@ class MainApp(object):
     @cherrypy.tools.json_out()
     def getUserListJSON(self):
         data = Db.getAllUserDataAsList()
-        print data
+        # print data
         for user in data:
 
             lastLogin = time.strftime(
@@ -207,11 +224,27 @@ class MainApp(object):
         dataList = {str(k): v for k, v in enumerate(data)}
         return dataList
 
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def getMessageListJSON(self):
+        username = cherrypy.serving.request.headers['Referer']
+        print username
+        messageList = Db.getMessages(username, self.username)
+        for row in messageList:
+            row['stamp'] = time.strftime(
+                "%Y/%m/%d, %H:%M:%S", time.localtime(float(row['stamp'])))
+            row['message'] = string.replace(row['message'], "''", "'")
+            row['username'] = row['sender']
+        
+        somelist = {str(k): v for k, v in enumerate(messageList)}
+        print somelist
+        return somelist
+
     ####### LOGIN SERVER ########
     def reportServer(self,username=None,password=None):
         # location = "2"
 
-        print "388080491"
+        # print "388080491"
         if username is None:
             username = self.username
         if password is None:
@@ -229,9 +262,9 @@ class MainApp(object):
             s.connect(("8.8.8.8", 80))
             ipLocal = s.getsockname()[0]
             s.close()
-            print "2313312214"
-            print ipLocal
-            print ip
+            # print "2313312214"
+            # print ipLocal
+            # print ip
 
             if '10.10' in ipLocal:
                 location = '0'
@@ -243,11 +276,11 @@ class MainApp(object):
                 location = '2'
                 ipFinal = ip
 
-            url = "http://cs302.pythonanywhere.com/report/?username="+username.lower()+"&password="+hashPassword+"&location="+"1"+"&ip="+ipFinal+"&port="+str(listen_port)+"&enc=0"
+            url = "http://cs302.pythonanywhere.com/report/?username="+username.lower()+"&password="+hashPassword+"&location="+location+"&ip="+ipFinal+"&port="+str(listen_port)+"&enc=0"
             # url = "http://cs302.pythonanywhere.com/report/?username=dfu987&password=74a852ce7fe588a5e8a0b18a7568ab37649f477393655d7a6fdc0f5f9af6bdcf&location=1&ip=172.23.45.207&port=10010&enc=0"
             response = urllib2.urlopen(url).read()
-            print "cancer"
-            print response
+            # print "cancer"
+            # print response
             # Update User Data if already logged in
             #NOTE include self.loggedIn later
             if '0' in response:
@@ -258,7 +291,7 @@ class MainApp(object):
                 # print data
                 Db.updateUserData(data)
                 self.timer.resume()
-            print "12313122141"
+            # print "12313122141"
             return response
         except:
             return "Internal error calling report API"
@@ -284,12 +317,43 @@ class MainApp(object):
             return dictionary
         except:
             return "Internal error calling getList API"
-          
+
+    # @cherrypy.tools.register('before_finalize', priority=60)
+    # def secureheaders():
+    #     headers = cherrypy.response.headers
+    #     headers['X-Frame-Options'] = 'DENY'
+    #     headers['X-XSS-Protection'] = '1: mode=block'
+    #     headers['X-Content-Type-Options'] = 'nosniff'
+    #     headers['Content-Security-Policy'] = "default-src='self'" #Potentially affects js
+    
+    
+
 def runMainApp():
     # Create an instance of MainApp and tell Cherrypy to send all requests under / to it. (ie all of them)
+    _csp_sources = ['default', 'script', 'style', 'img', 'connect', 'font', 'object', 'media', 'frame']
+    _csp_default_source = "'self'"
+    _csp_rules = list()
+    for c in _csp_sources:
+        _csp_rules.append('{:s}-src {:s}'.format(c, _csp_default_source))
+    _csp = '; '.join(_csp_rules)
+
     cherrypy.tree.mount(MainApp(), "/", {
         '/': {
+            # 'tools.secureheaders.on': True,
+            'tools.encode.on': True, 
+            'tools.encode.encoding': 'utf-8',
+            'tools.sessions.on' : 'True',
+            'tools.response_headers.on': True,
+            'tools.response_headers.headers': [
+                ('X-Frame-Options', 'DENY'),  # [XFO]
+                ('X-XSS-Protection', '1; mode=block'),  # [LUH]
+                # ('Content-Security-Policy', _csp),  # [CSP]
+                # ('X-Content-Security-Policy', _csp),  # [CSP]
+                # ('X-Webkit-CSP', _csp),  # [CSP]
+                ('X-Content-Type-Options', 'nosniff')  # [LUH]
+            ],
             'tools.staticdir.root': os.path.abspath(os.getcwd()),
+            
         },
         '/static': {
             'tools.staticdir.on': True,
