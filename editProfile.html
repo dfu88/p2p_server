@@ -25,7 +25,7 @@
       <a class="navbar-brand" href="/">Social Network</a>
     </div>
     <!-- <ul class="nav navbar-nav">
-      <li class="text"><a href="#">Home</a></li>
+      <li class="text"><a href="/viewProfile">View Profile</a></li>
       <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Page 1 <span class="caret"></span></a>
         <ul class="dropdown-menu">
           <li><a href="#">Page 1-1</a></li>
@@ -34,7 +34,8 @@
         </ul>
       </li>
       <li><a href="">View Profile</a></li>
-    </ul> -->
+    </ul>
+    <li><a href="/viewProfile"><span class="glyphicon glyphicon-user"></span> View Profile</a></li>
     <span class="navbar-text">
       View Profile
     </span>
@@ -43,7 +44,7 @@
       <input type="text" name="username_to_view" class="form-control" placeholder="Enter username">
       <button type="submit" class="btn btn-default" onclick="saveScrollLocations()">View</button>
       </div> 
-    </form>
+    </form> -->
     <ul class="nav navbar-nav navbar-right">
       <li><a href="/editProfile"><span class="glyphicon glyphicon-user"></span> Edit Profile</a></li>
       <li><a href="/signout"><span class="glyphicon glyphicon-log-in"></span> Logoff</a></li>
@@ -54,10 +55,11 @@
 <div class="container">
     <div class="limiter">
       <div class="container-general100">
-        <div class="wrap-general100">
-          <form action="#" method="post" enctype="multipart/form-data"class="login100-form validate-form flex-sb flex-w">
+        
+        <div class="wrap-login100">
+          <form action="/updateProfile" method="post" enctype="multipart/form-data"class="login100-form validate-form flex-sb flex-w">
             <span class="login100-form-title p-b-26">
-              Edit Profile:
+              Edit Profile: abc123
             </span>
 
             <div class="wrap-input100 validate-input m-b-16" data-validate = "Your full name is required">
