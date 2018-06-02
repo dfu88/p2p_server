@@ -35,6 +35,12 @@
 /*        overflow: hidden;*/
         /*position: relative;*/
     }
+
+    .media-hover:hover{
+      background: lightgrey;
+      color: white;
+    }
+
     .conversation
     {
         padding:5px;
@@ -238,7 +244,7 @@
         {{#each this}}
         <div class="media conversation">
           <a class="pull-left" href="/viewProfile/?username={{username}}"><img class="media-object" data-src="/static/js/holder.js/64x64" alt="profilepic" style="width: 32px; height: 32px;" src="/static/placeholder.png"></a>            
-            <div class="media-body">
+            <div class="media-body media-hover">
                 <a href="/message/?username={{username}}"><h5 class="media-heading">{{username}}</h5>
                 <small>Last Online: {{lastLogin}}</small></a>
             </div>

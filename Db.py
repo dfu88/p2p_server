@@ -156,11 +156,11 @@ def saveMessage(dictionary):
 	# c.execute('''INSERT INTO Messages_Files''')
 	c.execute("SELECT rowid FROM Messages_Files WHERE sender=? and destination=? and stamp=? and hash=?", (dictionary.get('sender'), dictionary.get('destination'), dictionary.get('stamp'), dictionary.get('hash'),))
 	data = c.fetchone()
-	# print "3193878749"
+	print "3193878749"
 	if data == None:
 		c.execute('''INSERT INTO Messages_Files(sender, destination, message, stamp, encoding, encryption, hashing, hash, decryptionKey, file, filename, content_type, messageStatus) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''', (dictionary.get('sender'), dictionary.get('destination'), dictionary.get('message'), dictionary.get('stamp'), dictionary.get('encoding'), dictionary.get('encryption'), dictionary.get('hashing'), dictionary.get('hash'), dictionary.get('decryptionKey'), dictionary.get('file'), dictionary.get('filename'), dictionary.get('content_type'), dictionary.get('messageStatus')))
-		# print "487989"
-	# print "YOOOOOOOOOO"
+		print "487989"
+	print "YOOOOOOOOOO"
 	c.close()
 	conn.commit()
 	conn.close()

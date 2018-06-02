@@ -287,6 +287,15 @@ class MainApp(object):
             finalData = {str(k): v for k, v in enumerate(data)}
             return finalData
 
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def getSelfUsername(self):
+        if self.loggedIn:
+            username = str(self.username)
+            return {'username': username}
+        else:
+            cherrypy.HTTPRedirect('/')
+
     ####### LOGIN SERVER ########
     def reportServer(self,username=None,password=None):
         # location = "2"
