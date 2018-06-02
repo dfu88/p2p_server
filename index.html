@@ -5,6 +5,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <!-- <link rel="stylesheet" type="text/css" href="/static/vendor/bootstrap/css/bootstrap.min.css"> -->
+  <link rel="stylesheet" type="text/css" href="/static/fonts/font-awesome-4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" type="text/css" href="/static/fonts/Linearicons-Free-v1.0.0/icon-font.min.css">
+  <link rel="stylesheet" type="text/css" href="/static/vendor/animate/animate.css">
+  <link rel="stylesheet" type="text/css" href="/static/vendor/css-hamburgers/hamburgers.min.css">
+  <link rel="stylesheet" type="text/css" href="/static/vendor/animsition/css/animsition.min.css">
+  <link rel="stylesheet" type="text/css" href="/static/vendor/select2/select2.min.css">
+  <link rel="stylesheet" type="text/css" href="/static/vendor/daterangepicker/daterangepicker.css">
+  <link rel="stylesheet" type="text/css" href="/static/css/util.css">
+  <link rel="stylesheet" type="text/css" href="/static/css/main.css">
   <link rel='stylesheet' href="static/css/simplemde.min.css">
   <style type="text/css">
    
@@ -51,6 +61,20 @@
         float: right;
         height: 90vh;
     }
+
+    .btn-attachments
+    {
+      float: left;
+      width: 85%
+    }
+
+    .btn-message
+    {
+      float: right;
+      width: 15%;
+      text-align: center;
+    }    
+
     .msg
     {
         padding:5px;
@@ -60,9 +84,20 @@
     .msg-wrap
     {
         padding:10px;
-        height: 49vh;
+        height: 52vh;
         overflow: auto;
 
+    }
+
+    .index-wrap
+    {
+      /*padding:10px;*/
+      display: flex;
+      justify-content: center;
+      height: 52vh;
+      align-items: center;
+      text-align: center;
+      /*margin: auto;*/
     }
 
     .time
@@ -89,14 +124,7 @@
         border: 1px solid #e1e1e8;
     }
 
-    .send-message-btn
-    {
-        border-top-left-radius: 0;
-        border-top-right-radius: 0;
-        border-bottom-left-radius: 0;
-
-        border-bottom-right-radius: 0;
-    }
+    
     .btn-panel
     {
         background: #f7f7f9;
@@ -187,7 +215,7 @@
       <a class="navbar-brand" href="/">Social Network</a>
     </div>
     <!-- <ul class="nav navbar-nav">
-      <li class="text"><a href="#">Home</a></li>
+      <li class="text"><a href="/viewProfile">View Profile</a></li>
       <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Page 1 <span class="caret"></span></a>
         <ul class="dropdown-menu">
           <li><a href="#">Page 1-1</a></li>
@@ -196,7 +224,8 @@
         </ul>
       </li>
       <li><a href="">View Profile</a></li>
-    </ul> -->
+    </ul>
+    <li><a href="/viewProfile"><span class="glyphicon glyphicon-user"></span> View Profile</a></li>
     <span class="navbar-text">
       View Profile
     </span>
@@ -205,7 +234,7 @@
       <input type="text" name="username_to_view" class="form-control" placeholder="Enter username">
       <button type="submit" class="btn btn-default" onclick="saveScrollLocations()">View</button>
       </div> 
-    </form>
+    </form> -->
     <ul class="nav navbar-nav navbar-right">
       <li><a href="/editProfile"><span class="glyphicon glyphicon-user"></span> Edit Profile</a></li>
       <li><a href="/signout"><span class="glyphicon glyphicon-log-in"></span> Logoff</a></li>
@@ -219,10 +248,10 @@
     <script id="userList-template" type="x-handlebars-template">
         {{#each this}}
         <div class="media conversation">
-          <a class="pull-left" href="/?username={{username}}"><img class="media-object" data-src="holder.js/64x64" alt="profilepic" style="width: 32px; height: 32px;" src="{{picture}}"></a>            
+          <a class="pull-left" href="/viewProfile/?username={{username}}"><img class="media-object" data-src="/static/js/holder.js/64x64" alt="profilepic" style="width: 32px; height: 32px;" src="/static/placeholder.png"></a>            
             <div class="media-body">
-                <h5 class="media-heading">{{username}}</h5>
-                <small>Last Online: {{lastLogin}}</small>
+                <a href="/message/?username={{username}}"><h5 class="media-heading">{{username}}</h5>
+                <small>Last Online: {{lastLogin}}</small></a>
             </div>
         </div>
         {{/each}}
@@ -231,56 +260,66 @@
 
   <div class="message-wrap col-lg-12">
    <!--  <ul class="peernav"></ul> -->
-   <div class="msg-wrap" id="your_div">
-      <script id="messagelist-template" type="x-handlebars-template">
+   <div class="index-wrap" id="your_div">
+
+    <h2>Press Username to Message a User<br>
+    Press Profile Picture to View User Profile</h2>
+      <!-- <script id="messagelist-template" type="x-handlebars-template">
         {{#each this}}
         <div class="media msg" id="marksdiv">
-            <a class="pull-left" href="chat?userID='{{username}}'"><img class="media-object" data-src="holder.js/64x64" alt="profilepic" style="width: 32px; height: 32px;" src="{{picture}}"></a>
+            <a class="pull-left" href="/viewProfile/?username={{username}}"><img class="media-object" data-src="/static/js/holder.js/64x64" alt="profilepic" style="width: 32px; height: 32px;" src="/static/placeholder.png"></a>
             <div class="media-body">
                 <h5 class="media-heading">{{username}}</h5>
-                <small class="col-lg-10">{{{message}}}</small>
+                <p class="col-lg-10">{{{message}}}</p>
                 <small class="pull-left time">
                 <i class="fa fa-clock-o"></i>{{stamp}}<br>{{messageStatus}}</small>
             </div>
         </div>
         {{/each}}
-      </script>
+      </script> -->
     </div>
-    <div class='send-wrap '>
-        <textarea name='message' id='message' form='usrform' class='form-control send-message' rows='3' placeholder='Write a reply...'></textarea>
+    <!-- <div class='send-wrap '>
+        <textarea name='message' id='message' form='usrform' class='form-control send-message' rows='3' placeholder='Message...'></textarea>
     </div>
     <div class='btn-panel'>
         <form accept-charset='UTF-8' action='/sendMessage' id='usrform' method='post' enctype='multipart/form-data'>
-            <input type='file' class=' col-lg-6 btn    send-message-btn' name='attachments' maxlength=50>
-            <input type='submit' class=' col-lg-4 text-right btn send-message-btn pull-right' role='button' value='Send Message'/>
+            <input type='file' class=' col-lg-6 btn btn-attachments name='attachments' maxlength=50>
+            <input type='submit' class=' col-lg-4 text-right btn btn-message role='button' value='Send'/>
         </form>
-    </div>
+    </div> -->
     <!-- <p>sdjzvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvbnsdvbjd
     vjscbb jb sdjb jsdb sdjbv jssb sb </p> -->
   <!-- </div> -->
 </div>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <!-- <script type="text/javascript" src="static/js/jquery-1.11.1.min.js"></script> -->
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-  
+<script src="static/vendor/animsition/js/animsition.min.js"></script>
+<script src="static/vendor/bootstrap/js/popper.js"></script>
+<!-- <script src="static/vendor/bootstrap/js/bootstrap.min.js"></script> -->
+<script src="static/vendor/select2/select2.min.js"></script>
+<script src="static/vendor/daterangepicker/moment.min.js"></script>
+<script src="static/vendor/daterangepicker/daterangepicker.js"></script>
+<script src="static/vendor/countdowntime/countdowntime.js"></script>
+<script src="static/js/main.js"></script>  
 <script type="text/javascript" src="static/js/handlebars-v4.0.10.js"></script>
 <script>
 $(function  () {
   $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getUserListJSON', function(data) {
       var template = $("#userList-template").html();
-      // console.log(data)
-      // console.log(template)
+      // console.log(data);
+      // console.log(template);
       var templateScript = Handlebars.compile(template);
       var html = templateScript(data);
       $(".conversation-wrap").append(html); 
   });
-  $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getMessageListJSON', function(data) {
-    var template = $("#messagelist-template").html();
-    var templateScript = Handlebars.compile(template);
-    var html = templateScript(data)
-    $(".message-wrap").append(html); 
-  });
+  // $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getMessageListJSON', function(data) {
+  //   var template = $("#messagelist-template").html();
+  //   var templateScript = Handlebars.compile(template);
+  //   var html = templateScript(data)
+  //   $(".msg-wrap").append(html); 
+  // });
 });
 </script>
 <script src="static/js/simplemde.min.js"></script>
