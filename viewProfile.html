@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>P2P Network</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <!-- <link rel="stylesheet" type="text/css" href="/static/vendor/bootstrap/css/bootstrap.min.css"> -->
+    <link rel="stylesheet" type="text/css" href="/static/fonts/font-awesome-4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/fonts/Linearicons-Free-v1.0.0/icon-font.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/vendor/animate/animate.css">
+    <link rel="stylesheet" type="text/css" href="/static/vendor/css-hamburgers/hamburgers.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/vendor/animsition/css/animsition.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/vendor/select2/select2.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/vendor/daterangepicker/daterangepicker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/util.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/main.css">
+<style>
+/*.card {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  max-width: 300px;
+  margin: auto;
+  text-align: center;
+  font-family: arial;
+}
+
+.title {
+  color: grey;
+  font-size: 18px;
+}
+
+button {
+  border: none;
+  outline: 0;
+  display: inline-block;
+  padding: 8px;
+  color: white;
+  background-color: #000;
+  text-align: center;
+  cursor: pointer;
+  width: 100%;
+  font-size: 18px;
+}
+
+a {
+  text-decoration: none;
+  font-size: 22px;
+  color: black;
+}*/
+
+#profile-image1 {
+        width: 150px;
+        height: 150px;
+        border:2px solid #03b1ce ;}
+        .tital{ font-size:16px; font-weight:500;}
+        .bot-border{ border-bottom:1px #f8f8f8 solid;  margin:5px 0  5px 0
+    }
+
+/*button:hover, a:hover {
+  opacity: 0.7;
+}*/
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">Social Network</a>
+    </div>
+    <!-- <ul class="nav navbar-nav">
+      <li class="text"><a href="/viewProfile">View Profile</a></li>
+      <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Page 1 <span class="caret"></span></a>
+        <ul class="dropdown-menu">
+          <li><a href="#">Page 1-1</a></li>
+          <li><a href="#">Page 1-2</a></li>
+          <li><a href="#">Page 1-3</a></li>
+        </ul>
+      </li>
+      <li><a href="">View Profile</a></li>
+    </ul>
+    <li><a href="/viewProfile"><span class="glyphicon glyphicon-user"></span> View Profile</a></li>
+    <span class="navbar-text">
+      View Profile
+    </span>
+    <form action="/viewProfile" method="post" class="navbar-form navbar-left" enctype="multipart/form-data">
+      <div class="form-group">
+      <input type="text" name="username_to_view" class="form-control" placeholder="Enter username">
+      <button type="submit" class="btn btn-default" onclick="saveScrollLocations()">View</button>
+      </div> 
+    </form> -->
+    <ul class="nav navbar-nav navbar-right">
+      <li><a href="/editProfile"><span class="glyphicon glyphicon-user"></span> Edit Profile</a></li>
+      <li><a href="/signout"><span class="glyphicon glyphicon-log-in"></span> Logoff</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="limiter">
+    <div class="container-login100">
+        <div class="wrap-login100">
+          <script id="userProfile-template" type="x-handlebars-template">
+            {{#each this}}
+            <span class="login100-form-title p-b-26">
+              Profile: {{username}}
+            </span>
+            <div align="center"> <img alt="User Pic" src="{{imgURL}}" id="profile-image1" class="img-circle img-responsive"></div>
+            <br>
+            <h1>{{fullname}}</h1>
+            <br>
+            <p><b>Location: </b>{{location}}</p>
+            <p><b>Position: </b>{{position}}</p>
+            <p><b>Description: </b>{{description}}</p>
+            {{/each}}
+          </script>
+        </div>
+    </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<!-- <script src="static/vendor/jquery/jquery-3.2.1.min.js"></script> -->
+<script src="/static/vendor/animsition/js/animsition.min.js"></script>
+<script src="/static/vendor/bootstrap/js/popper.js"></script>
+<!-- <script src="static/vendor/bootstrap/js/bootstrap.min.js"></script> -->
+<script src="/static/vendor/select2/select2.min.js"></script>
+<script src="/static/vendor/daterangepicker/moment.min.js"></script>
+<script src="/static/vendor/daterangepicker/daterangepicker.js"></script>
+<script src="/static/vendor/countdowntime/countdowntime.js"></script>
+<script src="/static/js/main.js"></script>
+<script type="text/javascript" src="/static/js/handlebars-v4.0.10.js"></script>
+<script>
+$(function  () {
+  $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getUserProfileJSON', function(data) {
+      var template = $("#userProfile-template").html();
+      console.log(data);
+      console.log(template);
+      var templateScript = Handlebars.compile(template);
+      var html = templateScript(data);
+      console.log(templateScript)
+      console.log(html)
+      $(".wrap-login100").append(html);
+  });
+});
+</script>
+
+</body>
+</html>
