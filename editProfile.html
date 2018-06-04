@@ -46,8 +46,19 @@
       </div> 
     </form> -->
     <ul class="nav navbar-nav navbar-right">
-      <li><a href="/editProfile"><span class="glyphicon glyphicon-user"></span> Edit Profile</a></li>
+      <script id="username-template" type="x-handlebars-template">
+      <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="">
+        <span class="glyphicon glyphicon-user"></span>
+        {{username}}
+        <span class="caret"></span></a>
+        <ul class="dropdown-menu">
+          <li><a href="/viewProfile/?username={{username}}">View Profile</a></li>
+          <li><a href="/editProfile">Edit Profile</a></li>
+        </ul>
+      </li>
+      
       <li><a href="/signout"><span class="glyphicon glyphicon-log-in"></span> Logoff</a></li>
+      </script>
     </ul>
   </div>
 </nav>
@@ -59,7 +70,9 @@
         <div class="wrap-login100">
           <form action="/updateProfile" method="post" enctype="multipart/form-data"class="login100-form validate-form flex-sb flex-w">
             <span class="login100-form-title p-b-26">
-              Edit Profile: abc123
+              <script id="name-template" type="x-handlebars-template">
+                Edit Profile: {{username}}
+              </script>
             </span>
 
             <div class="wrap-input100 validate-input m-b-16" data-validate = "Your full name is required">
@@ -110,6 +123,20 @@
 <script src="static/vendor/daterangepicker/daterangepicker.js"></script>
 <script src="static/vendor/countdowntime/countdowntime.js"></script>
 <script src="static/js/main.js"></script>
-
+<script type="text/javascript" src="/static/js/handlebars-v4.0.10.js"></script>
+<script>
+$(function  () {
+  $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getSelfUsername', function(data) {
+    var navTemplate = $("#username-template").html();
+    var navTemplateScript = Handlebars.compile(navTemplate);
+    var navHtml = navTemplateScript(data)
+    $(".navbar-right").append(navHtml); 
+    var nameTemplate = $("#name-template").html();
+    var nameTemplateScript = Handlebars.compile(nameTemplate);
+    var nameHtml = nameTemplateScript(data)
+    $(".login100-form-title").append(nameHtml); 
+  });
+});
+</script>
 </body>
 </html>

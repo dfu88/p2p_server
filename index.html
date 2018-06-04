@@ -100,7 +100,7 @@
       /*padding:10px;*/
       display: flex;
       justify-content: center;
-      height: 52vh;
+      height: 90vh;
       align-items: center;
       text-align: center;
       /*margin: auto;*/
@@ -242,26 +242,15 @@
       </div> 
     </form> -->
     <ul class="nav navbar-nav navbar-right">
-      <li><a href="/editProfile"><span class="glyphicon glyphicon-user"></span> Edit Profile</a></li>
-      <li><a href="/signout"><span class="glyphicon glyphicon-log-in"></span> Logoff</a></li>
+      
     </ul>
   </div>
 </nav>
   
 <div class="container-fluid">
-  <div class="conversation-wrap col-lg-3">
+  <div class="conversation-wrap col-lg-3" id="userList">
    <!--  <ul class="peernav"></ul> -->
-    <script id="userList-template" type="x-handlebars-template">
-        {{#each this}}
-        <div class="media conversation">
-          <a class="pull-left" href="/viewProfile/?username={{username}}"><img class="media-object" data-src="/static/js/holder.js/64x64" alt="profilepic" style="width: 32px; height: 32px;" src="/static/placeholder.png"></a>            
-            <div class="media-body media-hover">
-                <a href="/message/?username={{username}}"><h5 class="media-heading">{{username}}</h5>
-                <small>Last Online: {{lastLogin}}</small></a>
-            </div>
-        </div>
-        {{/each}}
-    </script>
+    
   </div>
 
   <div class="message-wrap col-lg-12">
@@ -310,26 +299,64 @@
 <script src="static/vendor/countdowntime/countdowntime.js"></script>
 <script src="static/js/main.js"></script>  
 <script type="text/javascript" src="static/js/handlebars-v4.0.10.js"></script>
+<script id="username-template" type="x-handlebars-template">
+  <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="">
+    <span class="glyphicon glyphicon-user"></span>
+    {{username}}
+    <span class="caret"></span></a>
+    <ul class="dropdown-menu">
+      <li><a href="/viewProfile/?username={{username}}">View Profile</a></li>
+      <li><a href="/editProfile">Edit Profile</a></li>
+    </ul>
+  </li>
+
+  <li><a href="/signout"><span class="glyphicon glyphicon-log-in"></span> Logoff</a></li>
+</script>
+<script id="userList-template" type="x-handlebars-template">
+    {{#each this}}
+    <div class="media conversation">
+      <a class="pull-left" href="/viewProfile/?username={{username}}"><img class="media-object" data-src="/static/js/holder.js/64x64" alt="profilepic" style="width: 32px; height: 32px;" src="{{picture}}""></a>            
+        <div class="media-body media-hover">
+          <a href="/message/?username={{username}}">
+            <span style="display: block;">
+            <h5 class="media-heading">{{username}}</h5>
+            {{#if onlineStatus}}
+              <i class="fa fa-square" style="font-size:12px;color:green"></i>
+            {{else}}
+              <i class="fa fa-square" style="font-size:12px;color:red"></i>
+            {{/if}}
+            <small>Active: {{lastLogin}}</small>
+            </span>
+          </a>
+        </div>
+    </div>
+    {{/each}}
+</script>
+
 <script>
-$(function  () {
+$(function update() {
+  $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getSelfUsername', function(data) {
+    $(".navbar-right").html("");
+    var template = $("#username-template").html();
+    var templateScript = Handlebars.compile(template);
+    var html = templateScript(data)
+    $(".navbar-right").append(html); 
+  });
   $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getUserListJSON', function(data) {
+      $(".conversation-wrap").html("");
       var template = $("#userList-template").html();
       // console.log(data);
       // console.log(template);
       var templateScript = Handlebars.compile(template);
       var html = templateScript(data);
       $(".conversation-wrap").append(html); 
-  });
-  // $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getMessageListJSON', function(data) {
-  //   var template = $("#messagelist-template").html();
-  //   var templateScript = Handlebars.compile(template);
-  //   var html = templateScript(data)
-  //   $(".msg-wrap").append(html); 
-  // });
+      window.setTimeout(update, 30000);
+  }); 
 });
+// update(); 
 </script>
-<script src="static/js/simplemde.min.js"></script>
-<script>new SimpleMDE({ element: document.getElementById('message'), spellChecker: false, });</script>
+<!-- <script src="static/js/simplemde.min.js"></script>
+<script>new SimpleMDE({ element: document.getElementById('message'), spellChecker: false, });</script> -->
 
 </body>
 </html>

@@ -91,8 +91,19 @@ a {
       </div> 
     </form> -->
     <ul class="nav navbar-nav navbar-right">
-      <li><a href="/editProfile"><span class="glyphicon glyphicon-user"></span> Edit Profile</a></li>
+      <script id="username-template" type="x-handlebars-template">
+      <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="">
+        <span class="glyphicon glyphicon-user"></span>
+        {{username}}
+        <span class="caret"></span></a>
+        <ul class="dropdown-menu">
+          <li><a href="/viewProfile/?username={{username}}">View Profile</a></li>
+          <li><a href="/editProfile">Edit Profile</a></li>
+        </ul>
+      </li>
+      
       <li><a href="/signout"><span class="glyphicon glyphicon-log-in"></span> Logoff</a></li>
+      </script>
     </ul>
   </div>
 </nav>
@@ -105,7 +116,7 @@ a {
             <span class="login100-form-title p-b-26">
               Profile: {{username}}
             </span>
-            <div align="center"> <img alt="User Pic" src="{{imgURL}}" id="profile-image1" class="img-circle img-responsive"></div>
+            <div align="center"> <img alt="User Pic" src="{{picture}}" id="profile-image1" class="img-circle img-responsive"></div>
             <br>
             <h1>{{fullname}}</h1>
             <br>
@@ -132,6 +143,12 @@ a {
 <script type="text/javascript" src="/static/js/handlebars-v4.0.10.js"></script>
 <script>
 $(function  () {
+  $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getSelfUsername', function(data) {
+    var template = $("#username-template").html();
+    var templateScript = Handlebars.compile(template);
+    var html = templateScript(data)
+    $(".navbar-right").append(html); 
+  });
   $.getJSON(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/getUserProfileJSON', function(data) {
       var template = $("#userProfile-template").html();
       console.log(data);
