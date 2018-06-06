@@ -318,7 +318,7 @@ $(function update() {
     var templateScript = Handlebars.compile(template);
     var html = templateScript(data);
     $(".conversation-wrap").append(html); 
-    window.setTimeout(update, 30000);
+    window.setTimeout(update, 10000);
 
   });
 });
@@ -346,7 +346,7 @@ $(function updateMessages() {
         // window.setTimeout(updateMessages, 30000);
       });
     }
-    window.setTimeout(updateMessages, 5000);
+    window.setTimeout(updateMessages, 2500);
   });
 });
 </script>

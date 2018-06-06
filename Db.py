@@ -1,5 +1,10 @@
-"""
-Databases functions handling the interactions with the database file
+""" 
+	Db.py
+
+    COMPSYS302 - Software Design
+    Author: Dylan Fu
+
+    Databases functions handling the interactions with the database file
 """
 
 import sqlite3
@@ -132,11 +137,20 @@ def getUserDataAsList(destination):
 	conn.close()
 	return userData
 
+def getPublicKey(destination):
+	conn = sqlite3.connect(DB_NAME)
+	c = conn.cursor()
+	c.execute("SELECT publicKey FROM Users WHERE username=?",(destination,))
+	data = c.fetchone()
+	if data is None:
+		return None
+	return data[0]
+
 def saveProfile(dictionary, username):
 	"""
 	Saves new data to a users profile.
 	"""
-	if dictionary['picture'] is None:
+	if dictionary.get('picture') is None or ('http://' not in dictionary.get('picture') and 'https://' not in dictionary.get('picture')):
 		dictionary['picture'] = "/static/placeholder.png"
 	if isinstance(dictionary, unicode):
 		dictionary = ast.literal_eval(dictionary)
@@ -146,9 +160,9 @@ def saveProfile(dictionary, username):
 	c.execute("SELECT rowid FROM Profiles WHERE username = ?", (username,))
 	data = c.fetchone()
 	if data == None:
-	    c.execute('''INSERT INTO Profiles (username, fullname, position, description, location, picture) VALUES (?,?,?,?,?,?)''', (username, dictionary.get('fullname'), dictionary.get('position'), dictionary.get('description'), dictionary.get('location'), dictionary.get('picture')))
+	    c.execute('''INSERT INTO Profiles (username, fullname, position, description, location, picture, lastUpdated) VALUES (?,?,?,?,?,?,?)''', (username, dictionary.get('fullname'), dictionary.get('position'), dictionary.get('description'), dictionary.get('location'), dictionary.get('picture'), dictionary.get('lastUpdated')))
 	else:
-	    c.execute('''UPDATE Profiles SET username=?, fullname=?, position=?, description=?, location=?, picture=? WHERE rowid=?''', [username, dictionary.get('fullname'), dictionary.get('position'), dictionary.get('description'), dictionary.get('location'), dictionary.get('picture'), data[0]])
+	    c.execute('''UPDATE Profiles SET username=?, fullname=?, position=?, description=?, location=?, picture=?, lastUpdated=? WHERE rowid=?''', [username, dictionary.get('fullname'), dictionary.get('position'), dictionary.get('description'), dictionary.get('location'), dictionary.get('picture'), dictionary.get('lastUpdated'), data[0]])
 	c.close()
 	conn.commit()
 	conn.close()
@@ -184,24 +198,25 @@ def getProfileAsList(username):
     return userProfileData
 
 def saveMessage(dictionary):
-	# print " INSIDE DB"
+	print " INSIDE DB"
 	conn = sqlite3.connect(DB_NAME)
 	c = conn.cursor()
-	# print "ISIDE ISH"
+	print "ISIDE ISH"
 	if dictionary.get('messageStatus') == None:
 		dictionary['messageStatus'] = "Receive Unconfirmed"
 	
 	# c.execute('''INSERT INTO Messages_Files''')
 	c.execute("SELECT rowid FROM Messages_Files WHERE sender=? and destination=? and stamp=? and hash=?", (dictionary.get('sender'), dictionary.get('destination'), dictionary.get('stamp'), dictionary.get('hash'),))
 	data = c.fetchone()
-	# print "3193878749"
+	print "3193878749"
 	if data == None:
 		c.execute('''INSERT INTO Messages_Files(sender, destination, message, stamp, encoding, encryption, hashing, hash, decryptionKey, messageStatus) VALUES (?,?,?,?,?,?,?,?,?,?)''', (dictionary.get('sender'), dictionary.get('destination'), dictionary.get('message'), dictionary.get('stamp'), dictionary.get('encoding'), dictionary.get('encryption'), dictionary.get('hashing'), dictionary.get('hash'), dictionary.get('decryptionKey'), dictionary.get('messageStatus')))
-		# print "487989"
-	# print "YOOOOOOOOOO"
+		print "487989"
+	print "YOOOOOOOOOO"
 	c.close()
 	conn.commit()
 	conn.close()
+	print "hkbhkbbk"
 	return True
 
 def getMessages(destination,sender):
@@ -213,3 +228,26 @@ def getMessages(destination,sender):
 	conn.commit()
 	conn.close()
 	return messageList
+
+def getSecret(username):
+	conn = sqlite3.connect(DB_NAME)
+	c = conn.cursor()
+	c.execute("SELECT secretKey FROM Profiles WHERE username=?",(username,))
+	data = c.fetchone()
+	if data is None:
+		return None
+	return data[0]
+
+def saveSecret(username, secret):
+	conn = sqlite3.connect(DB_NAME)
+	c = conn.cursor()
+	c.execute("SELECT rowid FROM Profiles WHERE username=?", (username,))
+	data = c.fetchone()
+	if data is None:
+		c.execute('''INSERT INTO Profiles (username, secretKey) VALUES (?,?)''', (username, secret))
+	else:
+		c.execute('''UPDATE Profiles SET secretKey=? WHERE rowid=?''',[secret, data[0]])
+	c.close()
+	conn.commit()
+	conn.close()
+	return True

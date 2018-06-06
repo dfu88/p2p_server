@@ -1,5 +1,5 @@
-
-""" Main.py
+""" 
+    Main.py
 
     COMPSYS302 - Software Design
     Author: Dylan Fu
@@ -22,6 +22,7 @@ import hmac, struct
 import json
 import mimetypes
 import os, os.path
+import pyotp
 import sched, time
 import socket
 import sys, traceback
@@ -58,6 +59,8 @@ class MainApp(object):
             self.loggedIn = False
             self.username = None
             self.hashPassword = None
+            self.rsaKey = Security.generateRSAKey()
+            self.pubkey = binascii.hexlify(self.rsaKey.publickey().exportKey("DER"))
             self.refreshMsg = False
             self.timer = Timer(60, self.reportServer)
             self.profileTimer = Timer(60, self.getAllOnlineProfiles)
@@ -65,6 +68,7 @@ class MainApp(object):
             self.timer.start()
             self.profileTimer.start()
             self.timer.pause()
+            cherrypy.engine.subscribe('stop', self.exitMainApp)
             # self.profileTimer.pause()
 
     # If they try somewhere we don't know, catch it here and send them to the right place.
@@ -89,9 +93,54 @@ class MainApp(object):
         
     @cherrypy.expose
     def login(self):
-        Page = file('login.html')
-        return Page
+        if self.loggedIn:
+            raise cherrypy.HTTPRedirect('/')
+        else:
+            Page = file('login.html')
+            return Page
         
+    @cherrypy.expose
+    def login2(self):
+        if self.loggedIn:
+            raise cherrypy.HTTPRedirect('/')
+        else:
+            if self.username is not None:
+                secret = Db.getSecret(self.username)
+                if secret is None or secret == '':
+                    secret = self.generateSecret(self.username)
+                    Db.saveSecret(self.username, secret)
+                    Page = file('login2New.html')
+                    return Page
+                else:
+                    Page = file('login2.html')
+                    return Page
+            else:
+                raise cherrypy.HTTPRedirect("/login")
+
+    @cherrypy.expose
+    def authoriseTFA(self, code=None):
+        if self.loggedIn:
+            raise cherrypy.HTTPRedirect('/')
+        elif code is not None:
+            secret = Db.getSecret(self.username)
+            totp = pyotp.TOTP(secret)
+            print totp.now()
+            try:
+                int(code)
+            except:
+                raise cherrypy.HTTPRedirect("/login2")
+            if int(totp.now()) == int(code):
+                self.loggedIn = True
+                self.timer.resume()
+                raise cherrypy.HTTPRedirect('/')
+            else:
+                self.loggedIn = False
+                raise cherrypy.HTTPRedirect("/login2")
+        else:
+            self.loggedIn = False
+            self.username = None
+            raise cherrypy.HTTPRedirect("/login")
+      
     # LOGGING IN AND OUT
     @cherrypy.expose
     def signin(self, username=None, password=None):
@@ -99,10 +148,9 @@ class MainApp(object):
         error = self.authoriseUserLogin(username,password)
         if (error == 0):
             self.username = username;
-            self.loggedIn = True
-            self.timer.resume()
-            # print "sucessdjkafb"
-        raise cherrypy.HTTPRedirect('/')
+            raise cherrypy.HTTPRedirect("/login2")
+        else:
+            raise cherrypy.HTTPRedirect('/')
 
     @cherrypy.expose
     def signout(self):
@@ -115,6 +163,7 @@ class MainApp(object):
                     self.username = None
                     self.hashPassword = None
                     self.timer.pause()
+                    self.profileTimer.pause()
         except:
             pass
         finally:
@@ -138,78 +187,96 @@ class MainApp(object):
             sender = self.username
             destination = cherrypy.session['viewUserMessage']
             userData = Db.getUserDataAsList(destination)
-            # print attachments
-            # print attachments.file
 
             payload = {'sender': sender, 'destination': destination, 'message': '', 'stamp': str(round(float(time.time())))}
-            if message is not u'':
-                messagePayload = copy.deepcopy(payload)
-                messagePayload['message'] = message
-                #Need to handle hashing and encryption later
-                request = None
-                if sender == destination:
-                    request = urllib2.Request('http://0.0.0.0:' + str(listen_port) + '/receiveMessage' , self.encJSON(messagePayload), {'Content-Type': 'application/json'})
-                else:
-                    request = urllib2.Request('http://' + userData[0]['ip'] +':' + userData[0]['port'] + '/receiveMessage' , self.encJSON(messagePayload), {'Content-Type': 'application/json'})
-                try:
-                    response = urllib2.urlopen(request,timeout=5).read()
-                except:
-                    response = "5: Timeout Error"
 
-                #Check if message received
-                if destination != self.username and '0' in response:
-                    messagePayload['messageStatus'] = "Message Received"
-                    Db.saveMessage(messagePayload)
-                elif '0' not in response:
-                    messagePayload['message'] = "FAILED: " + response
-                    messagePayload['messageStatus'] = "Message Failed"
-                    Db.saveMessage(messagePayload)
+            if message is not u'':
+                try:  
+                    messagePayload = copy.deepcopy(payload)
+                    messagePayload['message'] = message
+                    
+                    #Get highest encryption standard possible
+                    enc = self.getHighestEncStandard(destination,4)
+                    if enc == 3 and (len(messagePayload['message']) < 128):
+                        enc = self.getHighestEncStandard(destination,2)
+
+                    #Encrypt message payload in highest encryption standard possible
+                    messagePayload = Security.encryptMessagesFiles(messagePayload, userData[0]['publicKey'], enc)
+                    #Get response from destination node
+                    if sender == destination:
+                        request = urllib2.Request('http://0.0.0.0:' + str(listen_port) + '/receiveMessage' , self.encJSON(messagePayload), {'Content-Type': 'application/json'})
+                    else:
+                        request = urllib2.Request('http://' + userData[0]['ip'] +':' + userData[0]['port'] + '/receiveMessage' , self.encJSON(messagePayload), {'Content-Type': 'application/json'})
+                    try:
+                        response = urllib2.urlopen(request,timeout=5).read()
+                    except:
+                        response = "5: Timeout Error"
+
+                    #Check if message received, then save message and message status
+                    if destination != self.username and '0' in response:
+                        messagePayload['messageStatus'] = "Message Received"
+                        Db.saveMessage(messagePayload)
+                    elif '0' not in response:
+                        messagePayload['message'] = "FAILED: " + response
+                        messagePayload['messageStatus'] = "Message Failed"
+                        Db.saveMessage(messagePayload)
+                except:
+                    pass
 
             if attachments.file is not None:
-                path = "static/downloads/"
-                fileName = attachments.filename
-                # content_type = attachments.content_type.value
-                content_type = mimetypes.guess_type(fileName)[0]
-                # print content_type
-                attachments = base64.b64encode(attachments.file.read())
-                # print attachments
-                if not os.path.exists(path):
-                    os.makedirs(path)
-                file = open(path+fileName,"wb")
-                file.write(base64.b64decode(attachments))
-                file.close()
-                filePayload = {'sender': self.username, 'destination': destination, 'file': attachments, 'content_type': content_type, 'filename': fileName, 'stamp': unicode(int(time.time()))}
-                embeddedViewerHTML = '<a href="' + \
-                    os.path.join("/static/downloads/", fileName) + '\" download>' + fileName + '</a>'
-                if 'audio/' in content_type:
-                    embeddedViewerHTML = '<audio controls><source src="' + \
-                        os.path.join("/static/downloads/", fileName) + '\" type=\"' + content_type + '\"></audio>'
-                if 'image/' in content_type:
-                    embeddedViewerHTML = '<img src="' + \
-                        os.path.join("/static/downloads/", fileName) + '\" alt=\"' + fileName + '\" width="320">'
-                if 'video/' in content_type:
-                    embeddedViewerHTML = '<video width="320" height="240" controls><source src="' + \
-                        os.path.join("/static/downloads/", fileName) + '\" type=\"' + content_type + '\"></video>'
-                #Need to handle hashing and encryption later
-                request = None
-                if sender == destination:
-                    request = urllib2.Request('http://0.0.0.0:' + str(listen_port) + '/receiveFile' , self.encJSON(filePayload), {'Content-Type': 'application/json'})
-                else:
-                    request = urllib2.Request('http://' + userData[0]['ip'] +':' + userData[0]['port'] + '/receiveFile' , self.encJSON(filePayload), {'Content-Type': 'application/json'})
                 try:
-                    response = urllib2.urlopen(request,timeout=5).read()
-                except:
-                    response = "5: Timeout Error"
+                    path = "static/downloads/"
+                    fileName = attachments.filename
+                    content_type = mimetypes.guess_type(fileName)[0]
+                    attachments = base64.b64encode(attachments.file.read())
 
-                #Check if message received
-                if destination != self.username and '0' in response:
-                    payload['message'] = embeddedViewerHTML
-                    payload['messageStatus'] = "File Received"
-                    Db.saveMessage(payload)
-                elif '0' not in response:
-                    payload['message'] = embeddedViewerHTML
-                    payload['messageStatus'] = "File Failed"
-                    Db.saveMessage(payload)
+                    if not os.path.exists(path):
+                        os.makedirs(path)
+                    file = open(path+fileName,"wb")
+                    file.write(base64.b64decode(attachments))
+                    file.close()
+
+
+                    embeddedViewerHTML = '<a href="' + \
+                        os.path.join("/static/downloads/", fileName) + '\" download>' + fileName + '</a>'
+                    if 'audio/' in content_type:
+                        embeddedViewerHTML = '<audio controls><source src="' + \
+                            os.path.join("/static/downloads/", fileName) + '\" type=\"' + content_type + '\"></audio>'
+                    if 'image/' in content_type:
+                        embeddedViewerHTML = '<img src="' + \
+                            os.path.join("/static/downloads/", fileName) + '\" alt=\"' + fileName + '\" width="320">'
+                    if 'video/' in content_type:
+                        embeddedViewerHTML = '<video width="320" height="240" controls><source src="' + \
+                            os.path.join("/static/downloads/", fileName) + '\" type=\"' + content_type + '\"></video>'
+                    
+                    #Need to handle hashing and encryption later
+                    filePayload = {'sender': self.username, 'destination': destination, 'file': attachments, 'content_type': content_type, 'filename': fileName, 'stamp': unicode(int(time.time()))}
+
+                    enc = self.getHighestEncStandard(destination,4)
+                    if enc == 3 and (len(filePayload['message']) < 128):
+                        enc = self.getHighestEncStandard(destination,2)
+
+                    filePayload = Security.encryptMessagesFiles(filePayload, userData[0]['publicKey'], enc)
+                    if sender == destination:
+                        request = urllib2.Request('http://0.0.0.0:' + str(listen_port) + '/receiveFile' , self.encJSON(filePayload), {'Content-Type': 'application/json'})
+                    else:
+                        request = urllib2.Request('http://' + userData[0]['ip'] +':' + userData[0]['port'] + '/receiveFile' , self.encJSON(filePayload), {'Content-Type': 'application/json'})
+                    try:
+                        response = urllib2.urlopen(request,timeout=5).read()
+                    except:
+                        response = "5: Timeout Error"
+
+                    #Check if message received
+                    if destination != self.username and '0' in response:
+                        payload['message'] = embeddedViewerHTML
+                        payload['messageStatus'] = "File Received"
+                        Db.saveMessage(payload)
+                    elif '0' not in response:
+                        payload['message'] = embeddedViewerHTML
+                        payload['messageStatus'] = "File Failed"
+                        Db.saveMessage(payload)
+                except:
+                    pass
 
             raise cherrypy.HTTPRedirect("message/?username="+cherrypy.session['viewUserMessage'])
         else:
@@ -218,59 +285,108 @@ class MainApp(object):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     def receiveMessage(self):
-        # print "testing"
-        try:
-            dictionary = cherrypy.request.json
-            print dictionary
-            # for key in dictionary:
-            #     dictionary[key] = unicode(dictionary[key])
-            if ('sender' not in dictionary or 'destination' not in dictionary or 'message' not in dictionary or 'stamp' not in dictionary):
-                return '1: Missing Compulsory Field'
-            #Save message in database
-            # if (unicode(dictionary['enc']) and 'encryption' in dictionary) != u'0':
-            #     return "9: Encryption Standard Not Supported"
-            dictionary['messageStatus'] = "Message Received"
-            Db.saveMessage(dictionary)
-            self.refreshMsg = True
-            print self.refreshMsg
-            # print "!!!!!!!!testing"
-            return '0: Message Received'
-        except Exception as e:
-            return '-1: Internal Error'
+        if self.loggedIn:
+            try:
+                dictionary = cherrypy.request.json
+                if ('sender' not in dictionary or 'destination' not in dictionary or 'message' not in dictionary or 'stamp' not in dictionary):
+                    return '1: Missing Compulsory Field'
+                dictionary = Security.decryptMessagesFiles(dictionary, self.rsaKey)
+                if 'encryption' in dictionary and dictionary['encryption'] == '5':
+                    return "9: Encryption Standard Not Supported"
+                dictionary['messageStatus'] = "Message Received"
+                Db.saveMessage(dictionary)
+                self.refreshMsg = True
+                return '0: Message Received'
+            except:
+                return '-1: Internal Error'
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
     def receiveFile(self):
         try:
             dictionary = cherrypy.request.json
+
             if ('sender' not in dictionary or 'destination' not in dictionary or 'file' not in dictionary or 'filename' not in dictionary or 'content_type' not in dictionary or 'stamp' not in dictionary):
                 return ('1: Missing compulsory Field')
+            
+            dictionary = Security.decryptMessagesFiles(dictionary, self.rsaKey)
+
             if len(dictionary['file']) * 3 / 1024 > 5120 * 4:
                 return ('1: File size exceeded 5 MB')
+            
             path = "static/downloads/"
             if not os.path.exists(path):
                 os.makedirs(path)
             file = open(path+dictionary['filename'],"wb")
             file.write(base64.b64decode(dictionary['file']))
             file.close()
-            # content_type = mimetypes.guess_type(dictionary['filename'])[0]
+
+            content_type = mimetypes.guess_type(dictionary['filename'])[0]
             embeddedViewerHTML = '<a href="' + \
                 os.path.join("/static/downloads/", dictionary['filename']) + '\" download>' + dictionary['filename'] + '</a>'
-            if 'audio/' in dictionary['content_type']:
+            if 'audio/' in content_type:
                 embeddedViewerHTML = '<audio controls><source src="' + \
                     os.path.join("/static/downloads/", dictionary['filename']) + '\" type=\"' + dictionary['content_type'] + '\"></audio>'
-            if 'image/' in dictionary['content_type']:
+            if 'image/' in content_type:
                 embeddedViewerHTML = '<img src="' + \
                     os.path.join("/static/downloads/", dictionary['filename']) + '\" alt=\"' + dictionary['filename'] + '\" width="320">'
-            if 'video/' in dictionary['content_type']:
+            if 'video/' in content_type:
                 embeddedViewerHTML = '<video width="320" height="240" controls><source src="' + \
                     os.path.join("/static/downloads/", dictionary['filename']) + '\" type=\"' + dictionary['content_type'] + '\"></video>'
             payload = {'sender': dictionary['sender'], 'destination': dictionary['destination'], 'message': embeddedViewerHTML, 'stamp': dictionary['stamp'], 'messageStatus': "File Received"}
 
             Db.saveMessage(payload)
+            
+            self.refreshMsg = True
+
             return '0: File Received'
         except:
             return '-1: Internal Error'
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def handshake(self):
+        try:
+            data = cherrypy.request.json
+            if int(data['encryption']) == 1:
+                data['message'] = Security.XORDecrypt(data['message'])
+            if int(data['encryption']) == 2:
+                data['message'] = Security.AESDecrypt(data['message'], '41fb5b5ae4d57c5ee528adb078ac3b2e')
+            if int(data['encryption']) == 3:
+                data['message'] = Security.RSADecryptKey(data['message'], self.rsaKey)
+            if int(data['encryption']) == 4:
+                data['decryptionKey'] = Security.RSADecryptKey(data['decryptionKey'], self.rsaKey)
+                data['message'] = Security.AESDecrypt(data['message'], data['decryptionKey'])
+            return {'error': u'0: Message Decrypted', 'message': data['message']}
+        except:
+            return {'error': u'-1: Internal Error', 'message': data['message']}
+
+
+    def getHighestEncStandard(self, destination, index):
+        userData = Db.getUserDataAsList(destination)
+        alphabet = string.letters
+        randomString = ''
+        for i in range(16):
+            randomString += random.choice(alphabet)
+        
+        while index > 0:
+            try:
+                data = {'sender': self.username, 'destination': destination, 'message': randomString}
+                data['encryption'] = str(index)
+                data = Security.encryptMessagesFiles(data, self.pubkey, index)
+                request = urllib2.Request('http://' + userData[0]['ip'] +':' + userData[0]['port'] + '/handshake' , self.encJSON(data), {'Content-Type': 'application/json'})
+                response = urllib2.urlopen(request).read()
+                response = self.decJSON(response)
+                print response
+                print response['message']
+                print randomString
+                if response['message'] == randomString:
+                    return index
+            except:
+                pass
+            index = index - 1
+        return 0
 
     @cherrypy.expose
     def viewProfile(self, username=None):
@@ -302,7 +418,7 @@ class MainApp(object):
             description = "N/A"
         if location == None:
             location = "N/A"
-        if imgURL == None:
+        if imgURL == None or ('http://' not in imgURL and 'https://' not in imgURL):
             imgURL = "/static/placeholder.png"
         data = {'fullname': fullname, 'position': position, 'description': description, 'location': location, 'picture': imgURL, 'lastUpdated': round(float(time.time()))}
         Db.saveProfile(data, self.username)
@@ -358,6 +474,15 @@ class MainApp(object):
             # print response
             return 1
 
+    def generateSecret(self, username):
+        alphabet = string.letters
+        randomString = ""
+        for i in range(9):
+            randomString += random.choice(alphabet)
+        return base64.b32encode(username[:4] + randomString)[:16]
+
+    def retrieveQRCode(self,username,secret):
+        return "https://chart.googleapis.com/chart?chs=175x175&chld=M%7C0&cht=qr&chl=otpauth%3A%2F%2Ftotp%2F" + username + "%3Fsecret%3D" + secret + "%26issuer%3DP2P"
 
     """
     Function encJSON encodes data in a dictionary into JSON data
@@ -375,10 +500,8 @@ class MainApp(object):
     @cherrypy.tools.json_out()
     def getUserListJSON(self):
         data = Db.getAllUserDataAsList()
-        # print data
-        # onlineList = self.getListServer()
         onlineList = self.encJSON(self.onlineList)
-        # print onlineList
+
         for user in data:
             lastLogin = time.strftime(
                 "%H:%M:%S, %d/%m/%Y", time.localtime(float(user['lastLogin'] or 0)))
@@ -397,15 +520,12 @@ class MainApp(object):
             else:
                 user['onlineStatus'] = False
 
-        print "hjbhakakck"
         finalData = {str(k): v for k, v in enumerate(data)}
         return finalData
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def getMessageListJSON(self):
-        # username = cherrypy.serving.request.headers['Referer']
-        # print username
         data = Db.getMessages(cherrypy.session['viewUserMessage'], self.username)
         for row in data:
             row['stamp'] = time.strftime("%H:%M:%S, %d/%m/%Y", time.localtime(float(row['stamp'] or 0)))
@@ -413,7 +533,6 @@ class MainApp(object):
             row['username'] = row['sender']
 
         finalData = {str(k): v for k, v in enumerate(data)}
-        # print finalData
         return finalData
 
     @cherrypy.expose
@@ -429,29 +548,34 @@ class MainApp(object):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def getSelfUsername(self):
+        if self.loggedIn:
+            username = str(self.username)
+            return {'username': username}
+        else:
+            return {}
+
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def getTFAData(self):
         # if self.loggedIn:
         username = str(self.username)
-        return {'username': username}
-        # else:
-        #     cherrypy.HTTPRedirect('/')
+        secret = Db.getSecret(username)
+        return {'username': username, 'secret': secret}
+
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def getRefreshBoolean(self):
-        # if self.loggedIn:
-        refreshMsg = self.refreshMsg
-        if refreshMsg == True:
-            # print "hdvsdvjsbvbkabhvbdkasbsjbjkdvb
-            self.refreshMsg = False
-            return {'refreshMsg': True}
-            # self.refreshMsg = False
-        return {'refreshMsg': False}
+        if self.loggedIn:
+            refreshMsg = self.refreshMsg
+            if refreshMsg == True:
+                self.refreshMsg = False
+                return {'refreshMsg': True}
+            return {'refreshMsg': False}
 
     ####### LOGIN SERVER AND PERIODICALLY CALLED FUNCTIONS########
     def reportServer(self,username=None,password=None):
-        # location = "2"
-
-        # print "388080491"
         if username is None:
             username = self.username
         if password is None:
@@ -469,9 +593,6 @@ class MainApp(object):
             s.connect(("8.8.8.8", 80))
             ipLocal = s.getsockname()[0]
             s.close()
-            # print "2313312214"
-            # print ipLocal
-            # print ip
 
             if '10.10' in ipLocal:
                 location = '0'
@@ -483,29 +604,25 @@ class MainApp(object):
                 location = '2'
                 ipFinal = ip
 
-            url = "http://cs302.pythonanywhere.com/report/?username="+username.lower()+"&password="+hashPassword+"&location="+location+"&ip="+ipFinal+"&port="+str(listen_port)+"&enc=0"
-            # url = "http://cs302.pythonanywhere.com/report/?username=dfu987&password=74a852ce7fe588a5e8a0b18a7568ab37649f477393655d7a6fdc0f5f9af6bdcf&location=1&ip=172.23.45.207&port=10010&enc=0"
-            response = urllib2.urlopen(url).read()
-            # print "cancer"
-            # print response
-            # Update User Data if already logged in
-            #NOTE include self.loggedIn later
+            url = "http://cs302.pythonanywhere.com/report/?username="+username.lower()+"&password="+hashPassword+"&location="+location+"&ip="+ipFinal+"&port="+str(listen_port)+"&enc=0&pubkey="+self.pubkey
+            response = urllib2.urlopen(url, timeout=5).read()
+
             if '0' in response:
                 if self.loggedIn == False:
                     self.username = username.lower()
                     self.hashPassword = hashPassword
                 self.onlineList = self.getListServer()
-                # print data
                 Db.updateUserData(self.onlineList)
                 self.timer.resume()
-            # print "12313122141"
             return response
         except:
             return "Internal error calling report API"
 
     def logoffServer(self):
+        self.timer.pause()
+        self.profileTimer.pause()
         url = "https://cs302.pythonanywhere.com/logoff?username=" + self.username + "&password=" + self.hashPassword + "&enc=0"
-        response = urllib2.urlopen(url).read()
+        response = urllib2.urlopen(url, timeout=5).read()
         return response
 
     def userListServer(self):
@@ -526,35 +643,24 @@ class MainApp(object):
             return "Internal error calling getList API"
 
     def getAllOnlineProfiles(self):
-        # try:
-        data = Db.getAllUserDataAsList()
-        onlineList = self.encJSON(self.onlineList)
-        payload = {'sender': self.username}
-        # print onlineList
-        for user in data:
-            try:
-                if user['username'] in onlineList:
-                    # print user
-                    # print user['username']
-                    payload['profile_username'] = user['username']
-                    userData = Db.getUserDataAsList(user['username'])
-                    request = urllib2.Request('http://'+ userData[0]['ip'] + ':' + userData[0]['port'] + '/getProfile', self.encJSON(payload), {'Content-Type': 'application/json'})
-                    response = urllib2.urlopen(request, timeout=3).read()
-                    if len(response) != 0 and response != 0:
-                        dictionary = self.decJSON(response)
-                        Db.saveProfile(dictionary, user['username'])
-            except:
-                pass
-        self.profileTimer.resume()
+        if self.loggedIn:
+            data = Db.getAllUserDataAsList()
+            onlineList = self.encJSON(self.onlineList)
+            payload = {'sender': self.username}
 
-
-    # @cherrypy.tools.register('before_finalize', priority=60)
-    # def secureheaders():
-    #     headers = cherrypy.response.headers
-    #     headers['X-Frame-Options'] = 'DENY'
-    #     headers['X-XSS-Protection'] = '1: mode=block'
-    #     headers['X-Content-Type-Options'] = 'nosniff'
-    #     headers['Content-Security-Policy'] = "default-src='self'" #Potentially affects js
+            for user in data:
+                try:
+                    if user['username'] in onlineList:
+                        payload['profile_username'] = user['username']
+                        userData = Db.getUserDataAsList(user['username'])
+                        request = urllib2.Request('http://'+ userData[0]['ip'] + ':' + userData[0]['port'] + '/getProfile', self.encJSON(payload), {'Content-Type': 'application/json'})
+                        response = urllib2.urlopen(request, timeout=5).read()
+                        if len(response) != 0 and response != None and 'lastUpdated' in response:
+                            dictionary = self.decJSON(response)
+                            Db.saveProfile(dictionary, user['username'])
+                except:
+                    pass
+            self.profileTimer.resume()
     
     def exitMainApp(self):
         self.timer.pause()
@@ -564,7 +670,7 @@ class MainApp(object):
             print response
 
 def runMainApp():
-    # Create an instance of MainApp and tell Cherrypy to send all requests under / to it. (ie all of them)
+    # HTML Secure Headers to help prevent html injection and cross site scripting attacks
     _csp_sources = ['default', 'script', 'style', 'img', 'connect', 'font', 'object', 'media', 'frame']
     _csp_default_source = "'self'"
     _csp_rules = list()
@@ -572,6 +678,7 @@ def runMainApp():
         _csp_rules.append('{:s}-src {:s}'.format(c, _csp_default_source))
     _csp = '; '.join(_csp_rules)
 
+    # Create an instance of MainApp and tell Cherrypy to send all requests under / to it. (ie all of them)
     cherrypy.tree.mount(MainApp(), "/", {
         '/': {
             # 'tools.secureheaders.on': True,
@@ -593,9 +700,6 @@ def runMainApp():
         '/static': {
             'tools.staticdir.on': True,
             'tools.staticdir.dir': 'static',
-
-            # we don't need to initialize the database for static files served by CherryPy
-            # 'tools.db.on': False
         }
     })
 
@@ -605,12 +709,10 @@ def runMainApp():
                             'engine.autoreload.on': True,
                            })
 
-    print "========================="
-    print "University of Auckland"
-    print "COMPSYS302 - Server"
-    print "========================================"                       
-    mainapp = MainApp()
-    cherrypy.engine.subscribe('exit', MainApp().exitMainApp)
+    print "=============================="
+    print "        Social Network        "
+    print "          P2P Server          "
+    print "=============================="                       
 
     # Start the web server
     cherrypy.engine.start()
