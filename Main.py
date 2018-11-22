@@ -9,7 +9,7 @@
 
 # The address we listen for connections on
 listen_ip = "0.0.0.0"
-listen_port = 10010
+listen_port = 8080
 
 #Import built-in python libraries and frameworks
 import base64
@@ -272,7 +272,7 @@ class MainApp(object):
                         payload['messageStatus'] = "File Received"
                         Db.saveMessage(payload)
                     elif '0' not in response:
-                        payload['message'] = embeddedViewerHTML
+                        payload['message'] = "FAILED: " + response
                         payload['messageStatus'] = "File Failed"
                         Db.saveMessage(payload)
                 except:
