@@ -2,12 +2,13 @@
 Created by Dylan Fu
 
 ## Instructions
-1. Clone this repository to a Linux computer.
+1. Clone this repository to your computer.
 2. Open a terminal window and navigate to the cloned repository.
-3. Install all dependencies located in the folder "Libraries"
-3. Execute "python Main.py".
-4. All required folders have been included locally and the database file is created if not present.
-5. Navigate to localhost:10010/ to begin the application
+3. Use Python 2.7.15 for this project  (use pyenv).
+4. Install project dependencies using the following command `sh setup.sh`.
+5. Run the client using the following command `sh run.sh`.
+6. Navigate to localhost:8080/ to begin the application.
+7. When finished with the client deactivate the virtualenv using the following command `deactivate`.
 
 
 
