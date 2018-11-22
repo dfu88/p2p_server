@@ -1,4 +1,4 @@
-# P2P Server
+# P2P Client
 Created by Dylan Fu
 
 ## Instructions
